@@ -1,3 +1,14 @@
+<p align = "center">
+  <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" />
+  <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white" />
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
+  <img src="https://img.shields.io/badge/Uvicorn-4B8BBE?style=for-the-badge&logo=uvicorn&logoColor=white" />
+  <img src="https://img.shields.io/badge/Google_Gemini_API-4285F4?style=for-the-badge&logo=google&logoColor=white" />
+  <img src="https://img.shields.io/badge/python--dotenv-000000?style=for-the-badge&logo=dotenv&logoColor=white" />
+  <img src="https://img.shields.io/badge/PyPDF2%20%2F%20pdfplumber-CC2927?style=for-the-badge&logo=adobeacrobatreader&logoColor=white" />
+</p>
+
 # AI Resume Analyzer
 
 An AI-powered resume analysis platform that compares a candidate's resume against a job description and generates a match score, missing keywords, strengths, ATS tips, and improvement suggestions using the Gemini API.
@@ -14,8 +25,8 @@ An AI-powered resume analysis platform that compares a candidate's resume agains
 * Strength identification
 * Improvement suggestions
 * ATS optimization tips
-* FastAPI backend with REST endpoints
-* Clean HTML/CSS/JavaScript frontend
+* FastAPI backend
+* Clean HTML/CSS frontend
 
 ---
 
@@ -63,13 +74,12 @@ AI-resume-analyser/
 ### 1. Clone the Repository
 
 ```bash
-git clone <repository-url>
-cd AI-resume-analyser
+git clone https://github.com/Manoj-kanur/AI-Resume-Analyzer.git
+cd AI-Resume-Analyzer
 ```
 
 ### 2. Create a Virtual Environment
 
-#### Windows
 
 ```powershell
 python -m venv venv
