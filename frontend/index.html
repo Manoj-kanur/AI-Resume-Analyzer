@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ResumeAI — Smart Resume Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #16161f;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --accent: #6c63ff;
+    --accent2: #a78bfa;
+    --green: #22d3a0;
+    --amber: #f59e0b;
+    --red: #f87171;
+    --text: #f0eff8;
+    --muted: #8b8aa0;
+    --dim: #4a4960;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Ambient glow */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -200px; left: 50%;
+    transform: translateX(-50%);
+    width: 700px; height: 400px;
+    background: radial-gradient(ellipse, rgba(108,99,255,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { max-width: 860px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* Header */
+  header { padding: 48px 0 32px; text-align: center; }
+  .logo { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.2em; color: var(--accent2); text-transform: uppercase; margin-bottom: 20px; display: inline-flex; align-items: center; gap: 8px; }
+  .logo-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s ease infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  h1 { font-family: 'Syne', sans-serif; font-size: clamp(36px, 6vw, 56px); font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 14px; }
+  h1 span { background: linear-gradient(135deg, #6c63ff, #a78bfa, #22d3a0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .subtitle { color: var(--muted); font-size: 16px; font-weight: 300; max-width: 480px; margin: 0 auto; line-height: 1.6; }
+
+  /* Upload form */
+  .form-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border2);
+    border-radius: 20px;
+    padding: 36px;
+    margin: 40px 0 0;
+  }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media(max-width:640px) { .form-grid { grid-template-columns: 1fr; } }
+
+  .field label { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 10px; }
+
+  /* PDF drop zone */
+  .drop-zone {
+    border: 1.5px dashed var(--border2);
+    border-radius: 12px;
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    background: var(--surface2);
+  }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent); background: rgba(108,99,255,0.06); }
+  .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .drop-icon { font-size: 28px; margin-bottom: 8px; }
+  .drop-text { font-size: 13px; color: var(--muted); }
+  .drop-text strong { color: var(--accent2); }
+  .file-name { font-size: 13px; color: var(--green); margin-top: 8px; font-weight: 500; display: none; }
+
+  textarea {
+    width: 100%;
+    height: 180px;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--dim); }
+
+  .analyze-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: 28px;
+    padding: 16px;
+    background: linear-gradient(135deg, #6c63ff, #8b5cf6);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+  .analyze-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .analyze-btn:active { transform: translateY(0); }
+  .analyze-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* Loading */
+  .loading { display: none; text-align: center; padding: 60px 20px; }
+  .spinner { width: 42px; height: 42px; border: 2.5px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 20px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--muted); font-size: 14px; }
+
+  /* Results */
+  .results { display: none; margin-top: 40px; animation: fadeUp 0.5s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Score hero */
+  .score-hero {
+    background: var(--surface);
+    border: 0.5px solid var(--border2);
+    border-radius: 20px;
+    padding: 36px;
+    display: flex;
+    align-items: center;
+    gap: 36px;
+    margin-bottom: 20px;
+  }
+  @media(max-width:560px) { .score-hero { flex-direction: column; text-align: center; } }
+
+  .score-ring { position: relative; width: 110px; height: 110px; flex-shrink: 0; }
+  .score-ring svg { transform: rotate(-90deg); }
+  .score-ring-bg { fill: none; stroke: var(--border2); stroke-width: 8; }
+  .score-ring-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1); }
+  .score-number {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .score-value { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 700; line-height: 1; }
+  .score-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .score-info { flex: 1; }
+  .verdict-badge {
+    display: inline-block;
+    font-family: 'Syne', sans-serif;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 99px;
+    margin-bottom: 12px;
+  }
+  .summary-text { color: var(--muted); font-size: 14px; line-height: 1.7; }
+
+  /* Section grid */
+  .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media(max-width:640px) { .results-grid { grid-template-columns: 1fr; } }
+
+  .result-section {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+  }
+  .result-section.full { grid-column: 1 / -1; }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+  .tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tag {
+    font-size: 12px; padding: 5px 12px;
+    border-radius: 8px;
+    background: rgba(108,99,255,0.12);
+    color: var(--accent2);
+    border: 0.5px solid rgba(108,99,255,0.2);
+  }
+  .tag.missing {
+    background: rgba(248,113,113,0.1);
+    color: #fca5a5;
+    border-color: rgba(248,113,113,0.2);
+  }
+  .tag.strength {
+    background: rgba(34,211,160,0.1);
+    color: #6ee7b7;
+    border-color: rgba(34,211,160,0.2);
+  }
+
+  .improve-item { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 0.5px solid var(--border); }
+  .improve-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  .improve-section-name {
+    font-size: 11px; font-weight: 500;
+    color: var(--accent2); text-transform: uppercase;
+    letter-spacing: 0.08em; margin-bottom: 4px;
+  }
+  .improve-text { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+  .ats-item {
+    display: flex; gap: 10px; align-items: flex-start;
+    margin-bottom: 10px; font-size: 13px; color: var(--muted); line-height: 1.6;
+  }
+  .ats-item::before { content: '→'; color: var(--green); flex-shrink: 0; margin-top: 1px; }
+
+  .reset-btn {
+    display: block; margin: 24px auto 60px;
+    padding: 10px 28px;
+    background: transparent;
+    border: 0.5px solid var(--border2);
+    border-radius: 8px;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .reset-btn:hover { color: var(--text); border-color: var(--accent); }
+
+  .error-box {
+    display: none;
+    background: rgba(248,113,113,0.08);
+    border: 0.5px solid rgba(248,113,113,0.3);
+    border-radius: 12px; padding: 16px 20px;
+    color: #fca5a5; font-size: 13px;
+    margin-top: 16px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo"><span class="logo-dot"></span> ResumeAI</div>
+    <h1>Analyze your resume<br>against any <span>job description</span></h1>
+    <p class="subtitle">Get an instant AI-powered match score, missing keywords, and actionable improvements.</p>
+  </header>
+
+  <!-- Form -->
+  <div class="form-card" id="formSection">
+    <div class="form-grid">
+      <div class="field">
+        <label>Resume PDF</label>
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="resumeFile" accept=".pdf" />
+          <div class="drop-icon">📄</div>
+          <div class="drop-text"><strong>Click to upload</strong> or drag & drop<br>PDF only</div>
+          <div class="file-name" id="fileName"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Job Description</label>
+        <textarea id="jobDesc" placeholder="Paste the full job description here — the more detail, the better the analysis..."></textarea>
+      </div>
+    </div>
+    <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Analyze Resume
+    </button>
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loadingSection">
+    <div class="spinner"></div>
+    <div class="loading-text">Analyzing your resume with AI...</div>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="resultsSection"></div>
+</div>
+
+<script>
+const API_URL = "http://localhost:8000";
+
+const resumeFile = document.getElementById("resumeFile");
+const dropZone = document.getElementById("dropZone");
+const fileName = document.getElementById("fileName");
+
+resumeFile.addEventListener("change", () => {
+  if (resumeFile.files[0]) {
+    fileName.textContent = "✓ " + resumeFile.files[0].name;
+    fileName.style.display = "block";
+  }
+});
+
+dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+dropZone.addEventListener("drop", e => {
+  e.preventDefault(); dropZone.classList.remove("drag-over");
+  const f = e.dataTransfer.files[0];
+  if (f && f.name.endsWith(".pdf")) {
+    resumeFile.files = e.dataTransfer.files;
+    fileName.textContent = "✓ " + f.name;
+    fileName.style.display = "block";
+  }
+});
+
+function scoreColor(s) {
+  if (s >= 75) return "#22d3a0";
+  if (s >= 50) return "#f59e0b";
+  return "#f87171";
+}
+
+function verdictStyle(v) {
+  const map = {
+    "Strong Match": "background:rgba(34,211,160,0.12);color:#6ee7b7;",
+    "Good Match": "background:rgba(108,99,255,0.12);color:#a78bfa;",
+    "Partial Match": "background:rgba(245,158,11,0.12);color:#fcd34d;",
+    "Weak Match": "background:rgba(248,113,113,0.12);color:#fca5a5;"
+  };
+  return map[v] || map["Partial Match"];
+}
+
+function renderResults(data) {
+  const r = document.getElementById("resultsSection");
+  const circumference = 2 * Math.PI * 46;
+  const offset = circumference * (1 - data.match_score / 100);
+  const color = scoreColor(data.match_score);
+
+  r.innerHTML = `
+    <div class="score-hero">
+      <div class="score-ring">
+        <svg width="110" height="110" viewBox="0 0 110 110">
+          <circle class="score-ring-bg" cx="55" cy="55" r="46"/>
+          <circle class="score-ring-fill" id="ringFill" cx="55" cy="55" r="46"
+            stroke="${color}"
+            stroke-dasharray="${circumference}"
+            stroke-dashoffset="${circumference}"/>
+        </svg>
+        <div class="score-number">
+          <span class="score-value" style="color:${color}">${data.match_score}</span>
+          <span class="score-label">/ 100</span>
+        </div>
+      </div>
+      <div class="score-info">
+        <div class="verdict-badge" style="${verdictStyle(data.verdict)}">${data.verdict}</div>
+        <p class="summary-text">${data.summary}</p>
+      </div>
+    </div>
+
+    <div class="results-grid">
+      <div class="result-section">
+        <div class="section-title">Strengths</div>
+        <div class="tag-list">
+          ${data.strengths.map(s => `<span class="tag strength">${s}</span>`).join("")}
+        </div>
+      </div>
+
+      <div class="result-section">
+        <div class="section-title">Missing Keywords</div>
+        <div class="tag-list">
+          ${data.missing_keywords.map(k => `<span class="tag missing">${k}</span>`).join("")}
+        </div>
+      </div>
+
+      <div class="result-section full">
+        <div class="section-title">Improvement Suggestions</div>
+        ${data.improvements.map(i => `
+          <div class="improve-item">
+            <div class="improve-section-name">${i.section}</div>
+            <div class="improve-text">${i.suggestion}</div>
+          </div>`).join("")}
+      </div>
+
+      <div class="result-section full">
+        <div class="section-title">ATS Tips</div>
+        ${data.ats_tips.map(t => `<div class="ats-item">${t}</div>`).join("")}
+      </div>
+    </div>
+
+    <button class="reset-btn" onclick="reset()">← Analyze another resume</button>
+  `;
+
+  r.style.display = "block";
+  // Animate ring
+  setTimeout(() => {
+    document.getElementById("ringFill").style.strokeDashoffset = offset;
+  }, 100);
+}
+
+async function analyze() {
+  const file = resumeFile.files[0];
+  const jd = document.getElementById("jobDesc").value.trim();
+  const errorBox = document.getElementById("errorBox");
+  errorBox.style.display = "none";
+
+  if (!file) { showError("Please upload your resume PDF."); return; }
+  if (jd.length < 50) { showError("Please paste a more complete job description (at least 50 characters)."); return; }
+
+  document.getElementById("analyzeBtn").disabled = true;
+  document.getElementById("formSection").style.opacity = "0.4";
+  document.getElementById("loadingSection").style.display = "block";
+
+  const form = new FormData();
+  form.append("resume", file);
+  form.append("job_description", jd);
+
+  try {
+    const res = await fetch(`${API_URL}/analyze`, { method: "POST", body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Something went wrong.");
+    document.getElementById("loadingSection").style.display = "none";
+    document.getElementById("formSection").style.display = "none";
+    renderResults(data);
+  } catch (err) {
+    document.getElementById("loadingSection").style.display = "none";
+    document.getElementById("formSection").style.opacity = "1";
+    document.getElementById("analyzeBtn").disabled = false;
+    showError(err.message);
+  }
+}
+
+function showError(msg) {
+  const e = document.getElementById("errorBox");
+  e.textContent = "⚠ " + msg;
+  e.style.display = "block";
+}
+
+function reset() {
+  document.getElementById("resultsSection").style.display = "none";
+  document.getElementById("formSection").style.display = "block";
+  document.getElementById("formSection").style.opacity = "1";
+  document.getElementById("analyzeBtn").disabled = false;
+  resumeFile.value = "";
+  document.getElementById("fileName").style.display = "none";
+  document.getElementById("jobDesc").value = "";
+}
+</script>
+</body>
+</html>
